@@ -38,12 +38,16 @@ var pipelineMutex = &sync.Mutex{}
 func Setup(memoryRequiredInMB float64) {
 	memoryRequiredPerProcess = memoryRequiredInMB
 	log = ulogger.New()
+	log.SetLogLevel(ulogger.DebugLevel)
+	log.Infoln("Set memoryRequiredPerProcess to ", memoryRequiredPerProcess)
 }
 
 // Req accepts a string channel via which an access token is returned. The caller function can then begin its execution.
 func Req(returnChan chan string) {
+	log.Debugln("Requested new semaphore")
 	var ticket semaphore
 	ticket.Token = strings.Join(strings.Split(uuid.NewV4().String(), "-"), "")
+	log.Infoln("Generated new token --> ", ticket.Token)
 	ticket.CallerChan = returnChan
 	ticket.Type = "" // This can be implemented in a later version
 	ticket.Seat = make(chan int, 1)
@@ -55,13 +59,14 @@ func Req(returnChan chan string) {
 	}()
 	// Attach this ticket to the global list of tickets
 	pipelineMutex.Lock()
+	defer pipelineMutex.Unlock()
 	pipeline = append(pipeline, ticket)
-	pipelineMutex.Unlock()
 	go processNextTicket()
 }
 
 // processNextTicket processes the next available ticket in the pipeline
 func processNextTicket() {
+	log.Debugln("Started processNextTicket()")
 	pipelineMutex.Lock()
 	defer pipelineMutex.Unlock()
 	var ticket semaphore
@@ -71,6 +76,7 @@ func processNextTicket() {
 	ticket = pipeline[0]
 	// Check here if memory is available
 	if memoryRequiredPerProcess < checkAvailableMemory() {
+		log.Warningln("Ticket --> ", ticket.Token, " does not have sufficient memory to process...")
 		return
 	}
 	// Process can be run here
@@ -82,10 +88,12 @@ func processNextTicket() {
 // Rel accepts the allotted token to the process and removes it from memory; consequently, it processes the next available process
 func Rel(token string) {
 	pipelineMutex.Lock()
+	log.Debugln("Trying to release token --> ", token)
 	defer pipelineMutex.Unlock()
 	for i, ticket := range online {
 		if ticket.Token == token {
 			online = append(online[0:i], online[i+1:]...)
+			log.Warningln("Released token --> ", ticket.Token)
 			return
 		}
 	}
