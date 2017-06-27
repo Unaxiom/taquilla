@@ -20,7 +20,10 @@ import (
 // 4. Rel --> accepts the token and removes the semaphore from the
 //				pipeline and calls next
 
+// log is the ulogger object
 var log *ulogger.Logger
+
+var currentAvailableMemory = float64(12)
 
 // memoryRequiredPerProcess stores the memory required for running each process, in megabytes
 var memoryRequiredPerProcess float64
@@ -39,7 +42,7 @@ func Setup(memoryRequiredInMB float64) {
 	memoryRequiredPerProcess = memoryRequiredInMB
 	log = ulogger.New()
 	log.SetLogLevel(ulogger.DebugLevel)
-	log.Infoln("Set memoryRequiredPerProcess to ", memoryRequiredPerProcess)
+	log.Debugln("Set memoryRequiredPerProcess to ", memoryRequiredPerProcess)
 }
 
 // Req accepts a string channel via which an access token is returned. The caller function can then begin its execution.
@@ -47,7 +50,7 @@ func Req(returnChan chan string) {
 	log.Debugln("Requested new semaphore")
 	var ticket semaphore
 	ticket.Token = strings.Join(strings.Split(uuid.NewV4().String(), "-"), "")
-	log.Infoln("Generated new token --> ", ticket.Token)
+	log.Debugln("Generated new token --> ", ticket.Token)
 	ticket.CallerChan = returnChan
 	ticket.Type = "" // This can be implemented in a later version
 	ticket.Seat = make(chan int, 1)
@@ -66,17 +69,18 @@ func Req(returnChan chan string) {
 
 // processNextTicket processes the next available ticket in the pipeline
 func processNextTicket() {
-	log.Debugln("Started processNextTicket()")
+	log.Errorln("Started processNextTicket()")
 	pipelineMutex.Lock()
 	defer pipelineMutex.Unlock()
 	var ticket semaphore
 	if len(pipeline) == 0 {
+		log.Errorln("Length of pipeline is 0!")
 		return
 	}
 	ticket = pipeline[0]
 	// Check here if memory is available
-	if memoryRequiredPerProcess < checkAvailableMemory() {
-		log.Warningln("Ticket --> ", ticket.Token, " does not have sufficient memory to process...")
+	if memoryRequiredPerProcess > checkAvailableMemory() {
+		log.Errorln("Ticket --> ", ticket.Token, " does not have sufficient memory to process...")
 		return
 	}
 	// Process can be run here
@@ -92,8 +96,11 @@ func Rel(token string) {
 	defer pipelineMutex.Unlock()
 	for i, ticket := range online {
 		if ticket.Token == token {
+
 			online = append(online[0:i], online[i+1:]...)
-			log.Warningln("Released token --> ", ticket.Token)
+			currentAvailableMemory += memoryRequiredPerProcess
+			log.Debugln("Released token --> ", ticket.Token, " and current memory is ", currentAvailableMemory)
+			go processNextTicket()
 			return
 		}
 	}
@@ -101,7 +108,12 @@ func Rel(token string) {
 
 // checkAvailableMemory returns the available memory as a float64
 func checkAvailableMemory() float64 {
-	return float64(0)
+	currentAvailableMemory -= memoryRequiredPerProcess
+	if currentAvailableMemory <= 0 {
+		currentAvailableMemory = float64(0)
+	}
+	log.Debugln("Current available memory is ", currentAvailableMemory)
+	return currentAvailableMemory
 }
 
 type semaphore struct {
