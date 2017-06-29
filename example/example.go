@@ -11,7 +11,7 @@ var log *ulogger.Logger
 
 func init() {
 	log = ulogger.New()
-	taquilla.Setup(float64(7))
+	taquilla.Setup(float64(11))
 }
 
 func main() {

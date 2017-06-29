@@ -54,21 +54,15 @@ func Req(returnChan chan string) {
 	ticket.CallerChan = returnChan
 	ticket.Type = "" // This can be implemented in a later version
 	pipeline.append(ticket)
-	go processNextTicket()
+	go processNextTicket(ticket)
 }
 
 // processNextTicket processes the next available ticket in the pipeline
-func processNextTicket() {
-	log.Errorln("Started processNextTicket()")
-	var ticket semaphore
-	if pipeline.length() == 0 {
-		log.Errorln("Length of pipeline is 0!")
-		return
-	}
-	ticket = pipeline.getOne()
+func processNextTicket(ticket semaphore) {
+	log.Debugln("Started processNextTicket()")
 	// Check here if memory is available
 	if memoryRequiredPerProcess > currentAvailableMemory.get() {
-		log.Errorln("Ticket --> ", ticket.Token, " does not have sufficient memory to process...")
+		log.Warningln("Ticket --> ", ticket.Token, " does not have sufficient memory to process...")
 		return
 	}
 	// Process can be run here
@@ -76,7 +70,7 @@ func processNextTicket() {
 	ticket.CallerChan <- ticket.Token
 	pipeline.remove(ticket)
 	online.append(ticket)
-	log.Warningln("Pipeline is ", pipeline.list, "\nAnd Online is ", online.list)
+	log.Debugln("Pipeline is ", pipeline.list, "\nAnd Online is ", online.list)
 }
 
 // Rel accepts the allotted token to the process and removes it from memory; consequently, it processes the next available process
@@ -84,7 +78,13 @@ func Rel(token string) {
 	log.Debugln("Trying to release token --> ", token)
 	online.removeByToken(token)
 	currentAvailableMemory.add(memoryRequiredPerProcess)
-	go processNextTicket()
+	newTicket, presence := pipeline.getOne()
+	if !presence {
+		log.Warningln("No elements found in the pipeline!")
+		return
+	}
+	log.Infoln("New Ticket is ", newTicket)
+	go processNextTicket(newTicket)
 }
 
 type semaphore struct {
@@ -112,6 +112,7 @@ func (m *memory) set(amount float64) {
 func (m *memory) get() float64 {
 	m.Lock()
 	defer m.Unlock()
+	log.Debugln("Current memory is ", m.available)
 	return m.available
 }
 
@@ -174,8 +175,11 @@ func (l *semaphoreList) length() int {
 }
 
 // getOne returns the first semaphore of the list
-func (l *semaphoreList) getOne() semaphore {
+func (l *semaphoreList) getOne() (semaphore, bool) {
 	l.Lock()
 	defer l.Unlock()
-	return l.list[0]
+	if len(l.list) == 0 {
+		return semaphore{}, false
+	}
+	return l.list[0], true
 }
