@@ -40,21 +40,25 @@ func Setup(memoryRequiredInMB float64) {
 	memoryRequiredPerProcess = memoryRequiredInMB
 	log = ulogger.New()
 	// log.SetLogLevel(ulogger.DebugLevel)
-	log.SetLogLevel(ulogger.FatalLevel)
+	log.SetLogLevel(ulogger.ErrorLevel)
 	log.Debugln("Set memoryRequiredPerProcess to ", memoryRequiredPerProcess)
 	currentAvailableMemory.set(float64(12))
 }
 
 // Req accepts a string channel via which an access token is returned. The caller function can then begin its execution.
-func Req(returnChan chan string) {
+func Req() string {
 	log.Debugln("Requested new semaphore")
 	var ticket semaphore
 	ticket.Token = strings.Join(strings.Split(uuid.NewV4().String(), "-"), "")
 	log.Debugln("Generated new token --> ", ticket.Token)
-	ticket.CallerChan = returnChan
+	ticketChan := make(chan string)
+	// ticket.CallerChan = returnChan
+	ticket.CallerChan = ticketChan
 	ticket.Type = "" // This can be implemented in a later version
 	pipeline.append(ticket)
 	go processNextTicket(ticket)
+	<-ticketChan
+	return ticket.Token
 }
 
 // processNextTicket processes the next available ticket in the pipeline

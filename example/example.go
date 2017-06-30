@@ -11,20 +11,16 @@ var log *ulogger.Logger
 
 func init() {
 	log = ulogger.New()
-	taquilla.Setup(float64(11))
+	taquilla.Setup(float64(4))
 }
 
 func main() {
 	ch := make(chan int)
 	for i := 0; i < 5; i++ {
 		go func(count int) {
-			tokenChan := make(chan string)
-			// log.Infoln("Requesting token for process --> ", count)
-			// log.Infoln("Requesting token for process --> ", i)
-			taquilla.Req(tokenChan)
-			token := <-tokenChan
-			log.Infoln("Token received in example is ", token, " for count --> ", count)
+			token := taquilla.Req()
 			<-time.After(time.Second * time.Duration(3))
+			log.Infoln("Token received in example is ", token, " for count --> ", count)
 			taquilla.Rel(token)
 		}(i)
 	}
