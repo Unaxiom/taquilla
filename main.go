@@ -2,8 +2,9 @@ package taquilla
 
 import (
 	"strings"
+	"time"
 
-	"sync"
+	"runtime"
 
 	"github.com/Unaxiom/ulogger"
 	"github.com/twinj/uuid"
@@ -35,21 +36,42 @@ var pipeline semaphoreList
 // online consists of all the semaphores that are under execution
 var online semaphoreList
 
-// Setup accepts the average memory requirement for a process
-func Setup(memoryRequiredInMB float64) {
-	memoryRequiredPerProcess = memoryRequiredInMB
+// memUsageGraph stores all the time
+var memUsage memGraph
+
+func init() {
 	log = ulogger.New()
 	// log.SetLogLevel(ulogger.DebugLevel)
 	log.SetLogLevel(ulogger.ErrorLevel)
+	memUsage.value = make(map[int64]uint64)
+	go countMemoryUsage()
+}
+
+// countMemoryUsage keeps reading the current memory usage
+func countMemoryUsage() {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	log.Errorln("==================\n\nHeapAlloc: ", m.HeapAlloc, "\nHeapSys: ", m.HeapSys, "\nHeapObjects: ", m.HeapObjects, "\nStackSize: ", m.StackSys, "\n\n====================================")
+	go memUsage.set(time.Now().Unix(), m.Sys)
+	<-time.After(time.Second * time.Duration(1))
+	go countMemoryUsage()
+}
+
+// Setup accepts the average memory requirement for a process
+func Setup(memoryRequiredInMB float64) {
+	memoryRequiredPerProcess = memoryRequiredInMB
 	log.Debugln("Set memoryRequiredPerProcess to ", memoryRequiredPerProcess)
 	currentAvailableMemory.set(float64(12))
 }
 
-// Req accepts a string channel via which an access token is returned. The caller function can then begin its execution.
-func Req() string {
+// Req accepts a title for the semaphore and an access token is returned. The caller function can then begin its execution.
+func Req(ticketType string) string {
 	log.Debugln("Requested new semaphore")
 	var ticket semaphore
+	ticket.ReqTime = time.Now().Unix()
 	ticket.Token = strings.Join(strings.Split(uuid.NewV4().String(), "-"), "")
+	ticket.Type = ticketType
+	ticket.ReqSemList = online.getAll()
 	log.Debugln("Generated new token --> ", ticket.Token)
 	ticketChan := make(chan string)
 	// ticket.CallerChan = returnChan
@@ -80,7 +102,9 @@ func processNextTicket(ticket semaphore) {
 // Rel accepts the allotted token to the process and removes it from memory; consequently, it processes the next available process
 func Rel(token string) {
 	log.Debugln("Trying to release token --> ", token)
-	online.removeByToken(token)
+	ticket := online.removeByToken(token)
+	ticket.RelTime = time.Now().Unix()
+	ticket.RelSemList = online.getAll()
 	currentAvailableMemory.add(memoryRequiredPerProcess)
 	newTicket, presence := pipeline.getOne()
 	if !presence {
@@ -89,101 +113,10 @@ func Rel(token string) {
 	}
 	log.Infoln("New Ticket is ", newTicket)
 	go processNextTicket(newTicket)
+	go updateSemaphoreCharacteristics(ticket)
 }
 
-type semaphore struct {
-	Token      string      // Stores the UUID token
-	CallerChan chan string // Stores the channel that will be used to return the Token
-	Seat       chan int    // This is the actual semaphore
-	Type       string      // This can be used later on, to store the type of this semaphore
-}
+// updateSemaphoreCharacteristics accepts a semaphore, calculates the average memory used by this semaphore, and updates
+func updateSemaphoreCharacteristics(ticket semaphore) {
 
-// =============================================================================
-// 		memory struct
-type memory struct {
-	sync.RWMutex
-	available float64
-}
-
-// set sets the available memory to value passed
-func (m *memory) set(amount float64) {
-	m.Lock()
-	defer m.Unlock()
-	m.available = amount
-}
-
-// get gets the available memory
-func (m *memory) get() float64 {
-	m.Lock()
-	defer m.Unlock()
-	log.Debugln("Current memory is ", m.available)
-	return m.available
-}
-
-// add adds the passed value to available memory
-func (m *memory) add(amount float64) {
-	m.Lock()
-	defer m.Unlock()
-	m.available += amount
-}
-
-// reduce removes the passed value from the available memory
-func (m *memory) reduce(amount float64) {
-	m.Lock()
-	defer m.Unlock()
-	m.available -= amount
-}
-
-// =============================================================================
-// 		semaphoreList struct
-type semaphoreList struct {
-	sync.Mutex
-	list []semaphore
-}
-
-func (l *semaphoreList) append(s semaphore) {
-	l.Lock()
-	defer l.Unlock()
-	l.list = append(l.list, s)
-}
-
-func (l *semaphoreList) remove(s semaphore) {
-	l.Lock()
-	defer l.Unlock()
-	for i, sem := range l.list {
-		if sem == s {
-			l.list = append(l.list[:i], l.list[i+1:]...)
-			break
-		}
-	}
-}
-
-// removeByToken removes the semaphore from the list where the token matches
-func (l *semaphoreList) removeByToken(token string) {
-	l.Lock()
-	defer l.Unlock()
-	for i, sem := range l.list {
-		if sem.Token == token {
-			l.list = append(l.list[:i], l.list[i+1:]...)
-			break
-		}
-	}
-}
-
-// Returns the length of the semaphore list
-func (l *semaphoreList) length() int {
-	l.Lock()
-	defer l.Unlock()
-	length := len(l.list)
-	return length
-}
-
-// getOne returns the first semaphore of the list
-func (l *semaphoreList) getOne() (semaphore, bool) {
-	l.Lock()
-	defer l.Unlock()
-	if len(l.list) == 0 {
-		return semaphore{}, false
-	}
-	return l.list[0], true
 }
