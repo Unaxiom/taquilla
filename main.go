@@ -51,7 +51,7 @@ func init() {
 func countMemoryUsage() {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
-	log.Errorln("==================\n\nHeapAlloc: ", m.HeapAlloc, "\nHeapSys: ", m.HeapSys, "\nHeapObjects: ", m.HeapObjects, "\nStackSize: ", m.StackSys, "\n\n====================================")
+	// log.Errorln("==================\n\nHeapAlloc: ", m.HeapAlloc, "\nHeapSys: ", m.HeapSys, "\nHeapObjects: ", m.HeapObjects, "\nStackSize: ", m.StackSys, "\n\n====================================")
 	go memUsage.set(time.Now().Unix(), m.Sys)
 	<-time.After(time.Second * time.Duration(1))
 	go countMemoryUsage()
@@ -74,9 +74,9 @@ func Req(ticketType string) string {
 	ticket.ReqSemList = online.getAll()
 	log.Debugln("Generated new token --> ", ticket.Token)
 	ticketChan := make(chan string)
-	// ticket.CallerChan = returnChan
 	ticket.CallerChan = ticketChan
-	ticket.Type = "" // This can be implemented in a later version
+	ticket.Type = ticketType
+
 	pipeline.append(ticket)
 	go processNextTicket(ticket)
 	<-ticketChan
