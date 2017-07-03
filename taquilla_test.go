@@ -47,6 +47,8 @@ func TestAllOnline(t *testing.T) {
 	if returnedVal == 0 {
 		t.Fatal("Failed")
 	}
+	online.list = []semaphore{}
+	pipeline.list = []semaphore{}
 }
 
 func TestOneOnline(t *testing.T) {
@@ -58,7 +60,7 @@ func TestOneOnline(t *testing.T) {
 		go func(i int) {
 			token := Req(uuid.NewV4().String())
 			<-time.After(time.Second * time.Duration(3))
-			fmt.Println("Token received in example is ", token, " for count --> ", i)
+			fmt.Println("Token received in example is ", token, " for count --> ", i, "\n\nOnline --> ", online.length(), "\nPipeline --> ", pipeline.length())
 			if online.length() == 1 && pipeline.length() == 3 {
 				done1 <- 1
 			} else {
@@ -73,136 +75,136 @@ func TestOneOnline(t *testing.T) {
 	}
 }
 
-func TestSemReq(t *testing.T) {
-	// totalSems := 5
-	// fmt.Println("Total sems is ", totalSems)
-	// chanList := make([]chan string, totalSems)
-	// for i := 0; i < totalSems; i++ {
-	// 	ch := make(chan string)
-	// 	chanList = append(chanList, ch)
-	// 	fmt.Println("Created channel")
-	// }
-	// ch := make(chan int)
-	// for i := 0; i < totalSems; i++ {
-	// 	go func(i int) {
-	// 		token := Req(uuid.NewV4().String())
-	// 		<-time.After(time.Second * time.Duration(3))
-	// 		fmt.Println("Token received in example is ", token, " for count --> ", i)
-	// 		chanList[i] <- token
-	// 		Rel(token)
+// func TestSemReq(t *testing.T) {
+// 	// totalSems := 5
+// 	// fmt.Println("Total sems is ", totalSems)
+// 	// chanList := make([]chan string, totalSems)
+// 	// for i := 0; i < totalSems; i++ {
+// 	// 	ch := make(chan string)
+// 	// 	chanList = append(chanList, ch)
+// 	// 	fmt.Println("Created channel")
+// 	// }
+// 	// ch := make(chan int)
+// 	// for i := 0; i < totalSems; i++ {
+// 	// 	go func(i int) {
+// 	// 		token := Req(uuid.NewV4().String())
+// 	// 		<-time.After(time.Second * time.Duration(3))
+// 	// 		fmt.Println("Token received in example is ", token, " for count --> ", i)
+// 	// 		chanList[i] <- token
+// 	// 		Rel(token)
 
-	// 	}(i)
-	// }
-	// t.Parallel()
-	done1 := make(chan int)
-	done2 := make(chan int)
-	done3 := make(chan int)
-	done4 := make(chan int)
-	chanList := make([]chan int, 0)
-	chanList = []chan int{done1, done2, done3, done4}
+// 	// 	}(i)
+// 	// }
+// 	// t.Parallel()
+// 	done1 := make(chan int)
+// 	done2 := make(chan int)
+// 	done3 := make(chan int)
+// 	done4 := make(chan int)
+// 	chanList := make([]chan int, 0)
+// 	chanList = []chan int{done1, done2, done3, done4}
 
-	for i := 0; i < 4; i++ {
-		go func(i int) {
-			// t.Parallel()
-			token := Req(uuid.NewV4().String())
-			<-time.After(time.Second * time.Duration(3))
-			fmt.Println("Token received in example is ", token, " for count --> ", i)
-			fmt.Println("Length of online is ", online.length(), " and length of pipeline is ", pipeline.length())
-			if online.length() == 1 && pipeline.length() == 3 {
-				ch := chanList[i]
-				ch <- 1
-				return
-			}
-			// chanList[i] <- token
-			// Rel(token)
+// 	for i := 0; i < 4; i++ {
+// 		go func(i int) {
+// 			// t.Parallel()
+// 			token := Req(uuid.NewV4().String())
+// 			<-time.After(time.Second * time.Duration(3))
+// 			fmt.Println("Token received in example is ", token, " for count --> ", i)
+// 			fmt.Println("Length of online is ", online.length(), " and length of pipeline is ", pipeline.length())
+// 			if online.length() == 1 && pipeline.length() == 3 {
+// 				ch := chanList[i]
+// 				ch <- 1
+// 				return
+// 			}
+// 			// chanList[i] <- token
+// 			// Rel(token)
 
-			// done1 <- 1
-			ch := chanList[i]
-			ch <- 1
+// 			// done1 <- 1
+// 			ch := chanList[i]
+// 			ch <- 1
 
-		}(i)
-	}
+// 		}(i)
+// 	}
 
-	// go func(i int) {
-	// 	// t.Parallel()
-	// 	token := Req(uuid.NewV4().String())
-	// 	<-time.After(time.Second * time.Duration(3))
-	// 	fmt.Println("Token received in example is ", token, " for count --> ", i)
-	// 	fmt.Println("Length of online is ", online.length())
-	// 	// chanList[i] <- token
-	// 	Rel(token)
+// 	// go func(i int) {
+// 	// 	// t.Parallel()
+// 	// 	token := Req(uuid.NewV4().String())
+// 	// 	<-time.After(time.Second * time.Duration(3))
+// 	// 	fmt.Println("Token received in example is ", token, " for count --> ", i)
+// 	// 	fmt.Println("Length of online is ", online.length())
+// 	// 	// chanList[i] <- token
+// 	// 	Rel(token)
 
-	// 	done1 <- 1
+// 	// 	done1 <- 1
 
-	// }(0)
-	// go func(i int) {
-	// 	// t.Parallel()
-	// 	token := Req(uuid.NewV4().String())
-	// 	<-time.After(time.Second * time.Duration(3))
-	// 	fmt.Println("Token received in example is ", token, " for count --> ", i)
-	// 	// chanList[i] <- token
-	// 	Rel(token)
-	// 	done2 <- 2
-	// }(1)
+// 	// }(0)
+// 	// go func(i int) {
+// 	// 	// t.Parallel()
+// 	// 	token := Req(uuid.NewV4().String())
+// 	// 	<-time.After(time.Second * time.Duration(3))
+// 	// 	fmt.Println("Token received in example is ", token, " for count --> ", i)
+// 	// 	// chanList[i] <- token
+// 	// 	Rel(token)
+// 	// 	done2 <- 2
+// 	// }(1)
 
-	// go func(i int) {
-	// 	// t.Parallel()
-	// 	token := Req(uuid.NewV4().String())
-	// 	<-time.After(time.Second * time.Duration(3))
-	// 	fmt.Println("Token received in example is ", token, " for count --> ", i)
-	// 	// chanList[i] <- token
-	// 	Rel(token)
+// 	// go func(i int) {
+// 	// 	// t.Parallel()
+// 	// 	token := Req(uuid.NewV4().String())
+// 	// 	<-time.After(time.Second * time.Duration(3))
+// 	// 	fmt.Println("Token received in example is ", token, " for count --> ", i)
+// 	// 	// chanList[i] <- token
+// 	// 	Rel(token)
 
-	// }(2)
+// 	// }(2)
 
-	// go func(i int) {
-	// 	// t.Parallel()
-	// 	token := Req(uuid.NewV4().String())
-	// 	<-time.After(time.Second * time.Duration(3))
-	// 	fmt.Println("Token received in example is ", token, " for count --> ", i)
-	// 	// chanList[i] <- token
-	// 	Rel(token)
+// 	// go func(i int) {
+// 	// 	// t.Parallel()
+// 	// 	token := Req(uuid.NewV4().String())
+// 	// 	<-time.After(time.Second * time.Duration(3))
+// 	// 	fmt.Println("Token received in example is ", token, " for count --> ", i)
+// 	// 	// chanList[i] <- token
+// 	// 	Rel(token)
 
-	// }(3)
+// 	// }(3)
 
-	// go func(i int) {
-	// 	// t.Parallel()
-	// 	token := Req(uuid.NewV4().String())
-	// 	<-time.After(time.Second * time.Duration(3))
-	// 	fmt.Println("Token received in example is ", token, " for count --> ", i)
-	// 	// chanList[i] <- token
-	// 	Rel(token)
+// 	// go func(i int) {
+// 	// 	// t.Parallel()
+// 	// 	token := Req(uuid.NewV4().String())
+// 	// 	<-time.After(time.Second * time.Duration(3))
+// 	// 	fmt.Println("Token received in example is ", token, " for count --> ", i)
+// 	// 	// chanList[i] <- token
+// 	// 	Rel(token)
 
-	// }(4)
+// 	// }(4)
 
-	// <-ch
-	// for i := 0; i < totalSems; i++ {
-	// 	token := <-chanList[i]
-	// 	if len(token) <= 0 {
-	// 		t.Fatal("Invalid token received.")
-	// 	} else {
-	// 		log.Infoln("Test passed!")
-	// 	}
-	// }
+// 	// <-ch
+// 	// for i := 0; i < totalSems; i++ {
+// 	// 	token := <-chanList[i]
+// 	// 	if len(token) <= 0 {
+// 	// 		t.Fatal("Invalid token received.")
+// 	// 	} else {
+// 	// 		log.Infoln("Test passed!")
+// 	// 	}
+// 	// }
 
-	// var token string
-	// fmt.Println("Waiting for channels")
-	// token = <-chanList[0]
-	// fmt.Println("Received token 1 --> ", token)
-	// processToken(token, t)
-	// token = <-chanList[1]
-	// processToken(token, t)
-	// token = <-chanList[2]
-	// processToken(token, t)
-	// token = <-chanList[3]
-	// processToken(token, t)
-	// token = <-chanList[4]
-	// processToken(token, t)
-	fmt.Println(<-done1)
-	fmt.Println(<-done2)
-	fmt.Println(<-done3)
-	fmt.Println(<-done4)
-}
+// 	// var token string
+// 	// fmt.Println("Waiting for channels")
+// 	// token = <-chanList[0]
+// 	// fmt.Println("Received token 1 --> ", token)
+// 	// processToken(token, t)
+// 	// token = <-chanList[1]
+// 	// processToken(token, t)
+// 	// token = <-chanList[2]
+// 	// processToken(token, t)
+// 	// token = <-chanList[3]
+// 	// processToken(token, t)
+// 	// token = <-chanList[4]
+// 	// processToken(token, t)
+// 	fmt.Println(<-done1)
+// 	fmt.Println(<-done2)
+// 	fmt.Println(<-done3)
+// 	fmt.Println(<-done4)
+// }
 
 func processToken(token string, t *testing.T) {
 	if len(token) <= 0 {
