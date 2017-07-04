@@ -39,11 +39,15 @@ var online semaphoreList
 // memUsageGraph stores all the time
 var memUsage memGraph
 
+// semGraph stores a map between the semaphore types and the corresponding semCounter
+var semGraph semGraphStruct
+
 func init() {
 	log = ulogger.New()
 	// log.SetLogLevel(ulogger.DebugLevel)
 	log.SetLogLevel(ulogger.ErrorLevel)
-	memUsage.value = make(map[int64]uint64)
+	memUsage.value = make(map[int64]sysMemAndOnlineSem)
+	semGraph.container = make(map[string]*semCounterStruct)
 	go countMemoryUsage()
 }
 
@@ -75,8 +79,7 @@ func Req(ticketType string) string {
 	log.Debugln("Generated new token --> ", ticket.Token)
 	ticketChan := make(chan string)
 	ticket.CallerChan = ticketChan
-	ticket.Type = ticketType
-
+	go updateSemTypeCounter(ticketType)
 	pipeline.append(ticket)
 	go processNextTicket(ticket)
 	<-ticketChan
@@ -113,10 +116,15 @@ func Rel(token string) {
 	}
 	log.Infoln("New Ticket is ", newTicket)
 	go processNextTicket(newTicket)
-	go updateSemaphoreCharacteristics(ticket)
 }
 
-// updateSemaphoreCharacteristics accepts a semaphore, calculates the average memory used by this semaphore, and updates
-func updateSemaphoreCharacteristics(ticket semaphore) {
-
+// updateSemTypeCounter accepts the ticketType of the semaphore, and increments the count of the total number of semaphores created of this type
+func updateSemTypeCounter(ticketType string) {
+	// Check if the ticketType exists already
+	semGraph.set(ticketType)
 }
+
+// // updateSemaphoreCharacteristics accepts a semaphore, calculates the average memory used by this semaphore, and updates
+// func updateSemaphoreCharacteristics(ticket semaphore) {
+
+// }
