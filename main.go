@@ -42,6 +42,12 @@ var memUsage memGraph
 // semGraph stores a map between the semaphore types and the corresponding semCounter
 var semGraph semGraphStruct
 
+// memorySamplingTime is the time interval after which the memory used by the application is calculated
+const memorySamplingTime = 1
+
+// semaphoreMemoryUpdateTime is the time interval after which a semaphore's memory usage is calculated
+const semaphoreMemoryUpdateTime = 5
+
 func init() {
 	log = ulogger.New()
 	// log.SetLogLevel(ulogger.DebugLevel)
@@ -49,6 +55,7 @@ func init() {
 	memUsage.value = make(map[int64]sysMemAndOnlineSem)
 	semGraph.container = make(map[string]*semCounterStruct)
 	go countMemoryUsage()
+	go updateSemaphoreMemUsage()
 }
 
 // countMemoryUsage keeps reading the current memory usage
@@ -56,9 +63,18 @@ func countMemoryUsage() {
 	var m runtime.MemStats
 	runtime.ReadMemStats(&m)
 	// log.Errorln("==================\n\nHeapAlloc: ", m.HeapAlloc, "\nHeapSys: ", m.HeapSys, "\nHeapObjects: ", m.HeapObjects, "\nStackSize: ", m.StackSys, "\n\n====================================")
-	go memUsage.set(time.Now().Unix(), m.Sys)
-	<-time.After(time.Second * time.Duration(1))
+	log.Debugln("Sys Mem: ", m.Sys)
+	// go memUsage.set(time.Now().Unix(), m.Sys, online.getAll())
+	go memUsage.set(time.Now().Unix(), uint64(currentAvailableMemory.total-currentAvailableMemory.getFree()), online.getAllTypes())
+	<-time.After(time.Second * time.Duration(memorySamplingTime))
 	go countMemoryUsage()
+}
+
+// updateSemaphoreMemUsage keeps calculating the memory used by each semaphore
+func updateSemaphoreMemUsage() {
+	<-time.After(time.Second * time.Duration(semaphoreMemoryUpdateTime))
+	go memUsage.updateMem()
+	go updateSemaphoreMemUsage()
 }
 
 // Setup accepts the average memory requirement for a process
@@ -75,7 +91,7 @@ func Req(ticketType string) string {
 	ticket.ReqTime = time.Now().Unix()
 	ticket.Token = strings.Join(strings.Split(uuid.NewV4().String(), "-"), "")
 	ticket.Type = ticketType
-	ticket.ReqSemList = online.getAll()
+	// ticket.ReqSemList = online.getAll()
 	log.Debugln("Generated new token --> ", ticket.Token)
 	ticketChan := make(chan string)
 	ticket.CallerChan = ticketChan
@@ -90,7 +106,7 @@ func Req(ticketType string) string {
 func processNextTicket(ticket semaphore) {
 	log.Debugln("Started processNextTicket()")
 	// Check here if memory is available
-	if memoryRequiredPerProcess > currentAvailableMemory.get() {
+	if memoryRequiredPerProcess > currentAvailableMemory.getFree() {
 		log.Warningln("Ticket --> ", ticket.Token, " does not have sufficient memory to process...")
 		return
 	}
@@ -105,10 +121,11 @@ func processNextTicket(ticket semaphore) {
 // Rel accepts the allotted token to the process and removes it from memory; consequently, it processes the next available process
 func Rel(token string) {
 	log.Debugln("Trying to release token --> ", token)
+	currentAvailableMemory.add(memoryRequiredPerProcess)
 	ticket := online.removeByToken(token)
 	ticket.RelTime = time.Now().Unix()
-	ticket.RelSemList = online.getAll()
-	currentAvailableMemory.add(memoryRequiredPerProcess)
+	// ticket.RelSemList = online.getAll()
+
 	newTicket, presence := pipeline.getOne()
 	if !presence {
 		log.Warningln("No elements found in the pipeline!")
