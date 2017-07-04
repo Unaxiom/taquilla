@@ -65,3 +65,14 @@ func (l *semaphoreList) getAll() []semaphore {
 	defer l.RUnlock()
 	return l.list[:]
 }
+
+// getAllTypes returns all the available semaphore types in the list at that time
+func (l *semaphoreList) getAllTypes() []string {
+	l.RLock()
+	defer l.RUnlock()
+	var returnList []string
+	for _, sem := range l.list {
+		returnList = append(returnList, sem.Type)
+	}
+	return returnList
+}
