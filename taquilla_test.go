@@ -1,6 +1,7 @@
 package taquilla
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -22,6 +23,8 @@ func init() {
 func TestAllOnline(t *testing.T) {
 	currentAvailableMemory.set(float64(12))
 	Setup(float64(2))
+	online.list = []semaphore{}
+	pipeline.list = []semaphore{}
 	done1 := make(chan int)
 
 	for i := 0; i < 4; i++ {
@@ -47,13 +50,13 @@ func TestAllOnline(t *testing.T) {
 	if returnedVal == 0 {
 		t.Fatal("Failed")
 	}
-	online.list = []semaphore{}
-	pipeline.list = []semaphore{}
 }
 
 func TestOneOnline(t *testing.T) {
 	currentAvailableMemory.set(float64(12))
 	Setup(float64(11))
+	online.list = []semaphore{}
+	pipeline.list = []semaphore{}
 	done1 := make(chan int)
 
 	for i := 0; i < 4; i++ {
@@ -73,6 +76,49 @@ func TestOneOnline(t *testing.T) {
 	if returnedVal == 0 {
 		t.Fatal("Failed")
 	}
+}
+
+func TestDifferentTypes(t *testing.T) {
+	// Pass 2 different types of ticketTypes
+	currentAvailableMemory.set(float64(12))
+	Setup(float64(5))
+	online.list = []semaphore{}
+	pipeline.list = []semaphore{}
+	var wg sync.WaitGroup
+	ticketType := uuid.NewV4().String()
+	// Fire up all the processes
+	for i := 0; i < 3; i++ {
+		wg.Add(1)
+		go func(count int) {
+			token := Req(ticketType)
+			<-time.After(time.Second * time.Duration(1))
+			log.Infoln("Token received in example is ", token, " for count --> ", count)
+			Rel(token)
+			wg.Done()
+		}(i)
+	}
+	ticketType2 := uuid.NewV4().String()
+	for i := 3; i < 5; i++ {
+		wg.Add(1)
+		go func(count int) {
+			token := Req(ticketType2)
+			<-time.After(time.Second * time.Duration(1))
+			log.Infoln("Token received in example is ", token, " for count --> ", count)
+			Rel(token)
+			wg.Done()
+		}(i)
+	}
+	// <-ch
+	wg.Wait()
+
+	// Check for count of semGraph of these two types and assert them --> test will pass
+	if semGraph.container[ticketType].counter != 3 {
+		t.Fatal("TicketType 1 should've had a counter as 3. Found --> ", semGraph.container[ticketType].counter)
+	}
+	if semGraph.container[ticketType2].counter != 2 {
+		t.Fatal("TicketType 2 should've had a counter as 2. Found --> ", semGraph.container[ticketType2].counter)
+	}
+
 }
 
 // func TestSemReq(t *testing.T) {
