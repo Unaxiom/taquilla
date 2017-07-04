@@ -9,6 +9,6 @@ type semaphore struct {
 	Type       string      // Stores the type of this semaphore
 	ReqTime    int64       // Stores the timestamp of when the semaphore is requested
 	RelTime    int64       // Stores the timestamp of when the semaphore is released
-	ReqSemList []semaphore // Stores the semaphoreList when the semaphore is requested
-	RelSemList []semaphore // Stores the semaphoreList when the semaphore is released
+	// ReqSemList []semaphore // Stores the semaphoreList when the semaphore is requested
+	// RelSemList []semaphore // Stores the semaphoreList when the semaphore is released
 }
