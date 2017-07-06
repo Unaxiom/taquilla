@@ -30,14 +30,15 @@ func (m *memGraph) set(timestamp int64, sysMem uint64, onlineTypes []string) {
 }
 
 // get acquires a read only lock and returns the sys memory at a particular timestamp
-func (m *memGraph) get(timestamp int64) sysMemAndOnlineSem {
-	m.RLock()
-	defer m.RUnlock()
-	return m.value[timestamp]
-}
+// func (m *memGraph) get(timestamp int64) sysMemAndOnlineSem {
+// 	m.RLock()
+// 	defer m.RUnlock()
+// 	return m.value[timestamp]
+// }
 
 // updateMem calculates the memory required for each semaphore by solving the N-dimensional equation formed from constant monitoring of the memory used by the app
 func (m *memGraph) updateMem() {
+	// log.Errorln("------------------------------------------ UpdateMem() has been called here ------------------------------------------")
 	m.RLock()
 	defer m.RUnlock()
 	// Generate equation matrix here

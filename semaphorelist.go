@@ -69,11 +69,11 @@ func (l *semaphoreList) getOne() (semaphore, bool) {
 }
 
 // getAll returns all the available semaphores in the list at that time
-func (l *semaphoreList) getAll() []semaphore {
-	l.RLock()
-	defer l.RUnlock()
-	return l.list[:]
-}
+// func (l *semaphoreList) getAll() []semaphore {
+// 	l.RLock()
+// 	defer l.RUnlock()
+// 	return l.list[:]
+// }
 
 // getAllTypes returns all the available semaphore types in the list at that time
 func (l *semaphoreList) getAllTypes() []string {
