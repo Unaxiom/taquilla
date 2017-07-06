@@ -25,29 +25,29 @@ func main() {
 		wg.Add(1)
 		go func(count int) {
 			token := taquilla.Req(ticketType)
-			<-time.After(time.Second * time.Duration(4))
+			<-time.After(time.Second * time.Duration(2))
 			log.Infoln("Token received in example is ", token, " for count --> ", count)
 			taquilla.Rel(token)
 			wg.Done()
 		}(i)
 	}
 	ticketType2 := uuid.NewV4().String()
-	for i := 10; i < 20; i++ {
+	for i := 30; i < 40; i++ {
 		wg.Add(1)
 		go func(count int) {
 			token := taquilla.Req(ticketType2)
-			<-time.After(time.Second * time.Duration(4))
+			<-time.After(time.Second * time.Duration(2))
 			log.Infoln("Token received in example is ", token, " for count --> ", count)
 			taquilla.Rel(token)
 			wg.Done()
 		}(i)
 	}
 	ticketType3 := uuid.NewV4().String()
-	for i := 10; i < 20; i++ {
+	for i := 60; i < 70; i++ {
 		wg.Add(1)
 		go func(count int) {
 			token := taquilla.Req(ticketType3)
-			<-time.After(time.Second * time.Duration(4))
+			<-time.After(time.Second * time.Duration(2))
 			log.Infoln("Token received in example is ", token, " for count --> ", count)
 			taquilla.Rel(token)
 			wg.Done()
