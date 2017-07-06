@@ -1,8 +1,6 @@
 package taquilla
 
 import (
-	"fmt"
-
 	"github.com/gonum/matrix/mat64"
 )
 
@@ -15,6 +13,7 @@ func computeEquationSolution(eqnMatrix *mat64.Dense, resultMatrix *mat64.Dense, 
 	err := inv.Inverse(eqnMatrix)
 	if err != nil {
 		// log.Fatalln(err)
+		log.Errorln("Couldn't calculate the inverse because error is --> ", err.Error())
 		return
 	}
 
@@ -26,9 +25,9 @@ func computeEquationSolution(eqnMatrix *mat64.Dense, resultMatrix *mat64.Dense, 
 	for i, ticketType := range ticketTypeList {
 		semGraph.updateMem(ticketType, mul.At(i, 0))
 
-		fmt.Println("===================================================================")
-		fmt.Println("Type --> ", ticketType, ", Soln --> ", mul.At(i, 0))
-		fmt.Println("Type --> ", semGraph.container[ticketType].name, ", Soln --> ", semGraph.container[ticketType].avgMem)
-		fmt.Println("===================================================================")
+		// fmt.Println("===================================================================")
+		// fmt.Println("Type --> ", ticketType, ", Soln --> ", mul.At(i, 0))
+		// fmt.Println("Type --> ", semGraph.container[ticketType].name, ", Soln --> ", semGraph.container[ticketType].avgMem)
+		// fmt.Println("===================================================================")
 	}
 }
