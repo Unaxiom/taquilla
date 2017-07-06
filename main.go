@@ -111,17 +111,16 @@ func processNextTicket(ticket semaphore) {
 		return
 	}
 	// Process can be run here
-	currentAvailableMemory.reduce(memoryRequiredPerProcess)
 	ticket.CallerChan <- ticket.Token
 	pipeline.remove(ticket)
-	online.append(ticket)
+	online.appendAndReduceMemory(ticket)
 	log.Debugln("Pipeline is ", pipeline.list, "\nAnd Online is ", online.list)
 }
 
 // Rel accepts the allotted token to the process and removes it from memory; consequently, it processes the next available process
 func Rel(token string) {
 	log.Debugln("Trying to release token --> ", token)
-	currentAvailableMemory.add(memoryRequiredPerProcess)
+
 	ticket := online.removeByToken(token)
 	ticket.RelTime = time.Now().Unix()
 	// ticket.RelSemList = online.getAll()

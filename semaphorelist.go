@@ -15,6 +15,14 @@ func (l *semaphoreList) append(s semaphore) {
 	l.list = append(l.list, s)
 }
 
+// appendAndReduceMemory appends to the list, and also reduces the memory
+func (l *semaphoreList) appendAndReduceMemory(s semaphore) {
+	l.Lock()
+	defer l.Unlock()
+	l.list = append(l.list, s)
+	currentAvailableMemory.reduce(memoryRequiredPerProcess)
+}
+
 func (l *semaphoreList) remove(s semaphore) {
 	l.Lock()
 	defer l.Unlock()
@@ -38,6 +46,7 @@ func (l *semaphoreList) removeByToken(token string) semaphore {
 			break
 		}
 	}
+	currentAvailableMemory.add(memoryRequiredPerProcess)
 	return semToReturn
 }
 
