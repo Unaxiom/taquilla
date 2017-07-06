@@ -43,10 +43,10 @@ var memUsage memGraph
 var semGraph semGraphStruct
 
 // memorySamplingTime is the time interval after which the memory used by the application is calculated
-const memorySamplingTime = 1
+var memorySamplingTime = 1
 
 // semaphoreMemoryUpdateTime is the time interval after which a semaphore's memory usage is calculated
-const semaphoreMemoryUpdateTime = 5
+var semaphoreMemoryUpdateTime = 5
 
 func init() {
 	log = ulogger.New()
@@ -139,8 +139,3 @@ func updateSemTypeCounter(ticketType string) {
 	// Check if the ticketType exists already
 	semGraph.set(ticketType)
 }
-
-// // updateSemaphoreCharacteristics accepts a semaphore, calculates the average memory used by this semaphore, and updates
-// func updateSemaphoreCharacteristics(ticket semaphore) {
-
-// }
