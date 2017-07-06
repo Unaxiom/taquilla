@@ -1,6 +1,7 @@
 package taquilla
 
 import "sync"
+import "math"
 
 // ===========================================================================
 // semGraphStruct describes a struct that holds the memory characteristics of each process
@@ -34,10 +35,17 @@ func (s *semGraphStruct) len() int {
 	return len(s.availableTypes)
 }
 
+// updateMem accepts the ticketType and the memory consumed and updates the avgMem of the underlying semCounterStruct
+func (s *semGraphStruct) updateMem(ticketType string, memoryConsumed float64) {
+	s.Lock()
+	defer s.Unlock()
+	s.container[ticketType].updateAvgMem(memoryConsumed)
+}
+
 // semCounterStruct stores the average memory used by each process, as well as a counter to denote the number of such processes that have already run
 type semCounterStruct struct {
 	// sync.RWMutex
-	avgMem  uint64
+	avgMem  float64
 	counter uint64
 	name    string
 }
@@ -47,5 +55,25 @@ func (c *semCounterStruct) incrementCounter() {
 	// c.Lock()
 	// defer c.Unlock()
 	c.counter++
-	log.Errorln("Counter for ", c.name, " has become ", c.counter)
+	// log.Errorln("Counter for ", c.name, " has become ", c.counter)
+}
+
+// updateAvgMem accepts the memoryConsumed and updates the average memory of this semaphore
+func (c *semCounterStruct) updateAvgMem(memoryConsumed float64) {
+	// In case average memory hasn't been previously set, and a sudden spike appears, then it will be set without averaging out the value
+	if c.avgMem == 0 {
+		c.avgMem = memoryConsumed
+		return
+	}
+	if math.Abs(c.avgMem-memoryConsumed) < 0.1 {
+		// The memory consumed is the same as the current average --> calculation can be avoided
+		return
+	}
+	sum := float64(c.counter)*c.avgMem + math.Abs(memoryConsumed)
+
+	if c.counter == 0 {
+		return
+	}
+	c.avgMem = sum / float64(c.counter)
+
 }
